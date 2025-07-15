@@ -480,6 +480,32 @@
 .playlist-toggle:not(.active) {
     background-color: #f0f0f0;
 }
+    .move-buttons {
+        display: flex;
+        gap: 5px;
+        margin-left: 10px;
+    }
+    
+    .move-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        color: #999;
+        transition: all 0.2s;
+        padding: 2px 5px;
+        border-radius: 3px;
+    }
+    
+    .move-btn:hover {
+        color: var(--primary-color);
+        background-color: rgba(52, 152, 219, 0.1);
+    }
+    
+    .move-btn:disabled {
+        color: #ddd;
+        cursor: not-allowed;
+    }
     </style>
 </head>
 <body>
@@ -627,8 +653,8 @@ const elements = {
     normalBtn: document.getElementById('normalBtn'),
     fastBtn: document.getElementById('fastBtn'),
     playbackRateEl: document.getElementById('playbackRate'),
-    moveUpBtn: document.getElementById('moveUpBtn'),  // Đã thêm dấu phẩy ở đây
-    moveDownBtn: document.getElementById('moveDownBtn'),  // Đã thêm dấu phẩy ở đây
+    moveUpBtn: document.getElementById('moveUpBtn'),
+    moveDownBtn: document.getElementById('moveDownBtn'),
     deleteBtn: document.getElementById('deleteBtn')
 };
 
@@ -643,7 +669,7 @@ function initializeEventListeners() {
         elements.folderInput.click();
         elements.uploadInstruction.textContent = 'Chọn thư mục chứa các bài hát MP3/M4A';
     });
-    document.addEventListener('DOMContentLoaded', checkSavedPlaylistOnLoad);
+
     elements.fileInput.addEventListener('change', handleZipUpload);
     elements.folderInput.addEventListener('change', handleFolderUpload);
     elements.playBtn.addEventListener('click', togglePlay);
@@ -661,18 +687,12 @@ function initializeEventListeners() {
     elements.slowBtn.addEventListener('click', () => setPlaybackRate(0.5));
     elements.normalBtn.addEventListener('click', () => setPlaybackRate(1.0));
     elements.fastBtn.addEventListener('click', () => setPlaybackRate(1.5));
-    elements.progressContainer.classList.toggle('playing', isPlaying);
     elements.moveUpBtn.addEventListener('click', moveTrackUp);
     elements.moveDownBtn.addEventListener('click', moveTrackDown);
     elements.deleteBtn.addEventListener('click', deleteCurrentTrack);
-    
+
     // Khôi phục playlist khi tải trang
-    document.addEventListener('DOMContentLoaded', () => {
-        if (currentPlaylist.length === 0) {
-            restorePlaylistFromLocalStorage();
-        }
-        setPlaybackRate(1.0);
-    });
+    checkSavedPlaylistOnLoad();
     
     // Lưu playlist khi đóng trang
     window.addEventListener('beforeunload', () => {
@@ -854,26 +874,59 @@ function renderPlaylist() {
     
     songsToShow.forEach((song, index) => {
         const li = document.createElement('li');
+        const actualIndex = currentPlaylist.indexOf(song);
+        
         li.innerHTML = `
-            <div>
-                ${song.name}
-                <span class="file-format">${song.format}</span>
+            <div style="display: flex; align-items: center;">
+                <div class="move-buttons">
+                    <button class="move-btn move-up-btn" data-index="${actualIndex}" title="Di chuyển lên">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                    <button class="move-btn move-down-btn" data-index="${actualIndex}" title="Di chuyển xuống">
+                        <i class="fas fa-arrow-down"></i>
+                    </button>
+                </div>
+                <div>
+                    ${song.name}
+                    <span class="file-format">${song.format}</span>
+                </div>
             </div>
             <div>
                 <button class="favorite-btn ${song.favorite ? 'active' : ''}" 
-                        data-index="${currentPlaylist.indexOf(song)}"
+                        data-index="${actualIndex}"
                         title="${song.favorite ? 'Bỏ yêu thích' : 'Yêu thích'}">
                     <i class="fas fa-heart"></i>
                 </button>
-                <span id="duration-${index}">--:--</span>
+                <span id="duration-${actualIndex}">--:--</span>
             </div>
         `;
         
-        const actualIndex = currentPlaylist.indexOf(song);
         li.addEventListener('click', () => playTrack(actualIndex));
+        
+        // Disable nút di chuyển nếu ở đầu/cuối
+        const upBtn = li.querySelector('.move-up-btn');
+        const downBtn = li.querySelector('.move-down-btn');
+        
+        if (actualIndex === 0) upBtn.disabled = true;
+        if (actualIndex === currentPlaylist.length - 1) downBtn.disabled = true;
         
         elements.playlistEl.appendChild(li);
         updateDurationForPlaylistItem(actualIndex);
+    });
+    
+    // Thêm event listeners cho các nút di chuyển
+    document.querySelectorAll('.move-up-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            moveSingleTrackUp(parseInt(this.dataset.index));
+        });
+    });
+    
+    document.querySelectorAll('.move-down-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            moveSingleTrackDown(parseInt(this.dataset.index));
+        });
     });
     
     document.querySelectorAll('.favorite-btn').forEach(btn => {
@@ -1140,7 +1193,6 @@ function setPlaybackRate(rate) {
 
 // Hàm lưu playlist vào Local Storage
 function savePlaylistToLocalStorage() {
-    // Chỉ lưu thông tin cơ bản, không lưu URL vì nó là tạm thời
     const playlistToSave = currentPlaylist.map(song => ({
         name: song.name,
         format: song.format,
@@ -1149,7 +1201,6 @@ function savePlaylistToLocalStorage() {
     
     localStorage.setItem('musicPlaylist', JSON.stringify(playlistToSave));
 }
-
 
 // Hàm khôi phục playlist từ Local Storage
 function restorePlaylistFromLocalStorage() {
@@ -1231,19 +1282,17 @@ function checkSavedPlaylistOnLoad() {
         }
     }
 }
+
 // Hàm di chuyển bài hát lên
 function moveTrackUp() {
     if (currentTrackIndex <= 0 || currentPlaylist.length <= 1) return;
     
-    // Hoán đổi vị trí bài hát hiện tại với bài hát trước đó
     [currentPlaylist[currentTrackIndex], currentPlaylist[currentTrackIndex - 1]] = 
         [currentPlaylist[currentTrackIndex - 1], currentPlaylist[currentTrackIndex]];
     
     currentTrackIndex--;
     savePlaylistToLocalStorage();
     renderPlaylist();
-    
-    // Cập nhật UI để hiển thị bài hát đang phát mới
     updatePlaylistUI();
     showStatus("Đã di chuyển bài hát lên", "success");
 }
@@ -1252,15 +1301,50 @@ function moveTrackUp() {
 function moveTrackDown() {
     if (currentTrackIndex >= currentPlaylist.length - 1 || currentPlaylist.length <= 1) return;
     
-    // Hoán đổi vị trí bài hát hiện tại với bài hát tiếp theo
     [currentPlaylist[currentTrackIndex], currentPlaylist[currentTrackIndex + 1]] = 
         [currentPlaylist[currentTrackIndex + 1], currentPlaylist[currentTrackIndex]];
     
     currentTrackIndex++;
     savePlaylistToLocalStorage();
     renderPlaylist();
+    updatePlaylistUI();
+    showStatus("Đã di chuyển bài hát xuống", "success");
+}
+
+// Hàm di chuyển bài hát đơn lẻ lên
+function moveSingleTrackUp(index) {
+    if (index <= 0) return;
     
-    // Cập nhật UI để hiển thị bài hát đang phát mới
+    [currentPlaylist[index], currentPlaylist[index - 1]] = 
+        [currentPlaylist[index - 1], currentPlaylist[index]];
+    
+    if (currentTrackIndex === index) {
+        currentTrackIndex = index - 1;
+    } else if (currentTrackIndex === index - 1) {
+        currentTrackIndex = index;
+    }
+    
+    savePlaylistToLocalStorage();
+    renderPlaylist();
+    updatePlaylistUI();
+    showStatus("Đã di chuyển bài hát lên", "success");
+}
+
+// Hàm di chuyển bài hát đơn lẻ xuống
+function moveSingleTrackDown(index) {
+    if (index >= currentPlaylist.length - 1) return;
+    
+    [currentPlaylist[index], currentPlaylist[index + 1]] = 
+        [currentPlaylist[index + 1], currentPlaylist[index]];
+    
+    if (currentTrackIndex === index) {
+        currentTrackIndex = index + 1;
+    } else if (currentTrackIndex === index + 1) {
+        currentTrackIndex = index;
+    }
+    
+    savePlaylistToLocalStorage();
+    renderPlaylist();
     updatePlaylistUI();
     showStatus("Đã di chuyển bài hát xuống", "success");
 }
@@ -1269,29 +1353,23 @@ function moveTrackDown() {
 function deleteCurrentTrack() {
     if (!currentPlaylist.length || currentTrackIndex < 0) return;
     
-    // Xác nhận trước khi xóa
     if (!confirm(`Bạn có chắc muốn xóa bài hát "${currentPlaylist[currentTrackIndex].name}"?`)) {
         return;
     }
     
-    // Thu hồi URL object để giải phóng bộ nhớ
     URL.revokeObjectURL(currentPlaylist[currentTrackIndex].url);
     
-    // Xóa bài hát khỏi playlist
     currentPlaylist.splice(currentTrackIndex, 1);
     
-    // Điều chỉnh currentTrackIndex nếu cần
     if (currentTrackIndex >= currentPlaylist.length) {
         currentTrackIndex = Math.max(0, currentPlaylist.length - 1);
     }
     
-    // Nếu playlist trống, dừng phát
     if (currentPlaylist.length === 0) {
         elements.audioPlayer.src = '';
         isPlaying = false;
         updatePlayButton();
     } else if (elements.audioPlayer.src) {
-        // Nếu đang phát, phát bài hát mới tại vị trí hiện tại
         playTrack(currentTrackIndex);
     }
     
@@ -1300,6 +1378,7 @@ function deleteCurrentTrack() {
     updateSongCount();
     showStatus("Đã xóa bài hát", "success");
 }
+
 // Khởi tạo ứng dụng
 initializeEventListeners();
     </script>
