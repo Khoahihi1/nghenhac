@@ -135,6 +135,11 @@
             font-weight: 600;
         }
         
+        .playlist li.saved-item {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
         .file-format {
             font-size: 12px;
             background-color: var(--primary-color);
@@ -171,6 +176,9 @@
             margin-top: 15px;
             cursor: pointer;
             overflow: hidden;
+            position: relative;
+            margin-top: 25px; /* Tăng khoảng cách để chứa icon lớn hơn */
+            height: 10px; /* Có thể tăng chiều cao thanh progress nếu muốn */
         }
         
         .progress-bar {
@@ -178,6 +186,24 @@
             background-color: var(--primary-color);
             width: 0%;
             transition: width 0.1s;
+        }
+        
+        .progress-icon {
+            position: absolute;
+            top: -15px; /* Đẩy lên cao hơn */
+            left: 0;
+            width: 30px; /* Tăng kích thước */
+            height: 30px; /* Tăng kích thước */
+            transform: translateX(-50%);
+            transition: left 0.1s;
+            pointer-events: none;
+            z-index: 10; /* Đảm bảo nó nổi lên trên */
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); /* Thêm hiệu ứng bóng */
+            transition: all 0.3s ease;
+        }
+        .playing .progress-icon {
+            transform: translateX(-50%) scale(1.2); /* Phóng to khi đang phát */
+            filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
         }
         
         .controls {
@@ -339,6 +365,57 @@
             color: white;
         }
         
+        /* Volume and seek controls */
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .volume-slider {
+            width: 100px;
+        }
+        
+        .seek-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .seek-btn {
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        
+        .seek-btn:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .seek-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .seek-btn i {
+            font-size: 14px;
+        }
+        
+        .playback-rate {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+        }
+        
         /* Responsive */
         @media (max-width: 600px) {
             .container {
@@ -362,7 +439,47 @@
             .playlist-controls {
                 flex-direction: column;
             }
+            
+            .seek-buttons {
+                flex-wrap: wrap;
+            }
+            
+            .seek-btn {
+                padding: 6px 12px;
+                font-size: 14px;
+            }
         }
+        .playlist-toggle i {
+    font-size: 14px;
+}
+
+.playlist-toggle[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 100;
+}
+
+.playlist-toggle[title] {
+    position: relative;
+}
+
+/* Hiệu ứng khi hover các nút di chuyển/xóa */
+.playlist-toggle:not(.active):hover {
+    background-color: #e0e0e0;
+}
+
+.playlist-toggle:not(.active) {
+    background-color: #f0f0f0;
+}
     </style>
 </head>
 <body>
@@ -395,25 +512,37 @@
                 <div id="currentFormat"><i class="fas fa-info-circle"></i> Đang chờ phát nhạc</div>
             </div>
             
-            <div class="playlist-controls">
-                <div>
-                    <button class="playlist-toggle" id="showAllBtn">
-                        <i class="fas fa-list"></i> Tất cả
-                    </button>
-                    <button class="playlist-toggle" id="showFavoritesBtn">
-                        <i class="fas fa-heart"></i> Yêu thích
-                    </button>
-                </div>
-                <div class="auto-play-toggle" id="autoPlayToggle">
-                    <i class="fas fa-redo"></i> Tự động phát
-                </div>
-            </div>
+<div class="playlist-controls">
+    <div>
+        <button class="playlist-toggle" id="showAllBtn">
+            <i class="fas fa-list"></i> Tất cả
+        </button>
+        <button class="playlist-toggle" id="showFavoritesBtn">
+            <i class="fas fa-heart"></i> Yêu thích
+        </button>
+        <!-- Thêm nút mới ở đây -->
+        <button class="playlist-toggle" id="moveUpBtn" title="Di chuyển lên">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button class="playlist-toggle" id="moveDownBtn" title="Di chuyển xuống">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+        <button class="playlist-toggle" id="deleteBtn" title="Xóa bài hát">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+    <div class="auto-play-toggle" id="autoPlayToggle">
+        <i class="fas fa-redo"></i> Tự động phát
+    </div>
+</div>
             
             <audio id="audioPlayer" class="audio-player"></audio>
             
             <div class="progress-container" id="progressContainer">
                 <div class="progress-bar" id="progressBar"></div>
+                <img src="nyan-cat.gif" class="progress-icon" id="progressIcon" alt="🎵">
             </div>
+            
             <div class="time-display">
                 <span id="currentTime">0:00</span>
                 <span id="duration">0:00</span>
@@ -431,509 +560,748 @@
                 </button>
             </div>
             
+            <div class="seek-buttons">
+                <button class="seek-btn" id="rewindBtn" title="Tua lại 10 giây">
+                    <i class="fas fa-backward"></i> 10s
+                </button>
+                <button class="seek-btn" id="forwardBtn" title="Tua nhanh 10 giây">
+                    <i class="fas fa-forward"></i> 10s
+                </button>
+                <button class="seek-btn" id="slowBtn" title="Phát chậm (0.5x)">
+                    <i class="fas fa-snail"></i> 0.5x
+                </button>
+                <button class="seek-btn" id="normalBtn" title="Tốc độ bình thường (1x)">
+                    <i class="fas fa-clock"></i> 1x
+                </button>
+                <button class="seek-btn" id="fastBtn" title="Phát nhanh (1.5x)">
+                    <i class="fas fa-running"></i> 1.5x
+                </button>
+            </div>
+            
+            <div class="playback-rate" id="playbackRate">
+                Tốc độ phát: 1x
+            </div>
+            
             <ul class="playlist" id="playlist"></ul>
         </div>
     </div>
 
     <script>
-        // Biến toàn cục
-        let currentPlaylist = [];
-        let currentTrackIndex = 0;
-        let isPlaying = false;
-        let autoPlayEnabled = true;
-        let showOnlyFavorites = false;
+// Biến toàn cục
+let currentPlaylist = [];
+let currentTrackIndex = 0;
+let isPlaying = false;
+let autoPlayEnabled = true;
+let showOnlyFavorites = false;
+let playbackRate = 1.0;
+let savedPlaylist = JSON.parse(localStorage.getItem('musicPlaylist')) || [];
+
+// DOM Elements
+const elements = {
+    zipBtn: document.getElementById('zipBtn'),
+    folderBtn: document.getElementById('folderBtn'),
+    fileInput: document.getElementById('fileInput'),
+    folderInput: document.getElementById('folderInput'),
+    statusEl: document.getElementById('status'),
+    playerSection: document.getElementById('playerSection'),
+    playlistEl: document.getElementById('playlist'),
+    audioPlayer: document.getElementById('audioPlayer'),
+    playBtn: document.getElementById('playBtn'),
+    prevBtn: document.getElementById('prevBtn'),
+    nextBtn: document.getElementById('nextBtn'),
+    progressBar: document.getElementById('progressBar'),
+    progressContainer: document.getElementById('progressContainer'),
+    currentTimeEl: document.getElementById('currentTime'),
+    durationEl: document.getElementById('duration'),
+    playlistNameEl: document.getElementById('playlistName'),
+    songCountEl: document.getElementById('songCount'),
+    uploadInstruction: document.getElementById('uploadInstruction'),
+    currentFormatEl: document.getElementById('currentFormat'),
+    autoPlayToggle: document.getElementById('autoPlayToggle'),
+    showAllBtn: document.getElementById('showAllBtn'),
+    showFavoritesBtn: document.getElementById('showFavoritesBtn'),
+    progressIcon: document.getElementById('progressIcon'),
+    rewindBtn: document.getElementById('rewindBtn'),
+    forwardBtn: document.getElementById('forwardBtn'),
+    slowBtn: document.getElementById('slowBtn'),
+    normalBtn: document.getElementById('normalBtn'),
+    fastBtn: document.getElementById('fastBtn'),
+    playbackRateEl: document.getElementById('playbackRate'),
+    moveUpBtn: document.getElementById('moveUpBtn'),  // Đã thêm dấu phẩy ở đây
+    moveDownBtn: document.getElementById('moveDownBtn'),  // Đã thêm dấu phẩy ở đây
+    deleteBtn: document.getElementById('deleteBtn')
+};
+
+// Khởi tạo sự kiện
+function initializeEventListeners() {
+    elements.zipBtn.addEventListener('click', () => {
+        elements.fileInput.click();
+        elements.uploadInstruction.textContent = 'Chọn file ZIP chứa các bài hát MP3/M4A';
+    });
+    
+    elements.folderBtn.addEventListener('click', () => {
+        elements.folderInput.click();
+        elements.uploadInstruction.textContent = 'Chọn thư mục chứa các bài hát MP3/M4A';
+    });
+    document.addEventListener('DOMContentLoaded', checkSavedPlaylistOnLoad);
+    elements.fileInput.addEventListener('change', handleZipUpload);
+    elements.folderInput.addEventListener('change', handleFolderUpload);
+    elements.playBtn.addEventListener('click', togglePlay);
+    elements.prevBtn.addEventListener('click', playPrevious);
+    elements.nextBtn.addEventListener('click', playNext);
+    elements.audioPlayer.addEventListener('timeupdate', updateProgress);
+    elements.audioPlayer.addEventListener('ended', handleSongEnded);
+    elements.audioPlayer.addEventListener('loadedmetadata', updateDuration);
+    elements.progressContainer.addEventListener('click', seek);
+    elements.autoPlayToggle.addEventListener('click', toggleAutoPlay);
+    elements.showAllBtn.addEventListener('click', () => toggleFavoriteFilter(false));
+    elements.showFavoritesBtn.addEventListener('click', () => toggleFavoriteFilter(true));
+    elements.rewindBtn.addEventListener('click', () => seekTime(-10));
+    elements.forwardBtn.addEventListener('click', () => seekTime(10));
+    elements.slowBtn.addEventListener('click', () => setPlaybackRate(0.5));
+    elements.normalBtn.addEventListener('click', () => setPlaybackRate(1.0));
+    elements.fastBtn.addEventListener('click', () => setPlaybackRate(1.5));
+    elements.progressContainer.classList.toggle('playing', isPlaying);
+    elements.moveUpBtn.addEventListener('click', moveTrackUp);
+    elements.moveDownBtn.addEventListener('click', moveTrackDown);
+    elements.deleteBtn.addEventListener('click', deleteCurrentTrack);
+    
+    // Khôi phục playlist khi tải trang
+    document.addEventListener('DOMContentLoaded', () => {
+        if (currentPlaylist.length === 0) {
+            restorePlaylistFromLocalStorage();
+        }
+        setPlaybackRate(1.0);
+    });
+    
+    // Lưu playlist khi đóng trang
+    window.addEventListener('beforeunload', () => {
+        currentPlaylist.forEach(song => URL.revokeObjectURL(song.url));
+        savePlaylistToLocalStorage();
+    });
+}
+
+// Hiển thị trạng thái
+function showStatus(message, type = 'info') {
+    const colors = {
+        error: { bg: '#fdecea', text: '#e74c3c' },
+        success: { bg: '#e8f5e9', text: '#2ecc71' },
+        info: { bg: '#e3f2fd', text: '#3498db' }
+    };
+    
+    elements.statusEl.innerHTML = type === 'loading' 
+        ? `<span class="loading"></span> ${message}`
+        : message;
         
-        // DOM Elements
-        const elements = {
-            zipBtn: document.getElementById('zipBtn'),
-            folderBtn: document.getElementById('folderBtn'),
-            fileInput: document.getElementById('fileInput'),
-            folderInput: document.getElementById('folderInput'),
-            statusEl: document.getElementById('status'),
-            playerSection: document.getElementById('playerSection'),
-            playlistEl: document.getElementById('playlist'),
-            audioPlayer: document.getElementById('audioPlayer'),
-            playBtn: document.getElementById('playBtn'),
-            prevBtn: document.getElementById('prevBtn'),
-            nextBtn: document.getElementById('nextBtn'),
-            progressBar: document.getElementById('progressBar'),
-            progressContainer: document.getElementById('progressContainer'),
-            currentTimeEl: document.getElementById('currentTime'),
-            durationEl: document.getElementById('duration'),
-            playlistNameEl: document.getElementById('playlistName'),
-            songCountEl: document.getElementById('songCount'),
-            uploadInstruction: document.getElementById('uploadInstruction'),
-            currentFormatEl: document.getElementById('currentFormat'),
-            autoPlayToggle: document.getElementById('autoPlayToggle'),
-            showAllBtn: document.getElementById('showAllBtn'),
-            showFavoritesBtn: document.getElementById('showFavoritesBtn')
+    elements.statusEl.style.backgroundColor = colors[type]?.bg || '#f8f9fa';
+    elements.statusEl.style.color = colors[type]?.text || '#333';
+}
+
+// Xử lý tải lên file ZIP
+async function handleZipUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.name.endsWith('.zip')) {
+        showStatus('Vui lòng chọn file ZIP có đuôi .zip', 'error');
+        return;
+    }
+    
+    showStatus('Đang giải nén và xử lý file ZIP...', 'loading');
+    
+    try {
+        const zip = new JSZip();
+        const loadedZip = await zip.loadAsync(file);
+        
+        const audioFiles = [];
+        let totalFiles = 0;
+        
+        loadedZip.forEach((relativePath, zipEntry) => {
+            const lowerName = zipEntry.name.toLowerCase();
+            if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
+                audioFiles.push(zipEntry);
+            }
+            totalFiles++;
+        });
+        
+        if (audioFiles.length === 0) {
+            showStatus(`Không tìm thấy file MP3/M4A nào trong ${totalFiles} file`, 'error');
+            return;
+        }
+        
+        showStatus(`Đang tải ${audioFiles.length} bài hát...`, 'loading');
+        
+        currentPlaylist = [];
+        const batchSize = 5;
+        
+        for (let i = 0; i < audioFiles.length; i += batchSize) {
+            const batch = audioFiles.slice(i, i + batchSize);
+            const songs = await Promise.all(batch.map(processAudioFile));
+            
+            currentPlaylist.push(...songs.filter(Boolean));
+            
+            showStatus(`Đang tải ${Math.min(i + batchSize, audioFiles.length)}/${audioFiles.length} bài hát...`, 'loading');
+            
+            if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+        }
+        
+        renderPlaylist();
+        showStatus(`Đã tải thành công ${currentPlaylist.length} bài hát từ file ZIP`, 'success');
+        elements.playerSection.style.display = 'block';
+        elements.playlistNameEl.textContent = `Playlist: ${file.name.replace('.zip', '')}`;
+        updateSongCount();
+        
+    } catch (err) {
+        console.error('Lỗi khi xử lý file ZIP:', err);
+        showStatus(`Lỗi: ${err.message || 'Không thể xử lý file ZIP'}`, 'error');
+        currentPlaylist.forEach(song => URL.revokeObjectURL(song.url));
+        currentPlaylist = [];
+    }
+}
+
+// Xử lý từng file audio
+async function processAudioFile(file) {
+    try {
+        const blob = await file.async('blob');
+        return {
+            name: cleanFileName(file.name),
+            url: URL.createObjectURL(blob),
+            format: file.name.toLowerCase().endsWith('.m4a') ? 'M4A' : 'MP3',
+            favorite: false
         };
-        
-        // Event Listeners
-        elements.zipBtn.addEventListener('click', () => {
-            elements.fileInput.click();
-            elements.uploadInstruction.textContent = 'Chọn file ZIP chứa các bài hát MP3/M4A';
+    } catch (err) {
+        console.error(`Lỗi khi xử lý file ${file.name}:`, err);
+        return null;
+    }
+}
+
+// Làm sạch tên file
+function cleanFileName(filename) {
+    return filename
+        .replace(/\.(mp3|m4a)$/i, '')
+        .replace(/[_\-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// Xử lý tải lên thư mục
+async function handleFolderUpload(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    showStatus('Đang quét thư mục...', 'loading');
+    
+    try {
+        const audioFiles = Array.from(files).filter(file => {
+            const lowerName = file.name.toLowerCase();
+            return lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a');
         });
         
-        elements.folderBtn.addEventListener('click', () => {
-            elements.folderInput.click();
-            elements.uploadInstruction.textContent = 'Chọn thư mục chứa các bài hát MP3/M4A';
+        if (audioFiles.length === 0) {
+            showStatus(`Không tìm thấy file MP3/M4A nào trong ${files.length} file`, 'error');
+            return;
+        }
+        
+        showStatus(`Đang tải ${audioFiles.length} bài hát...`, 'loading');
+        
+        currentPlaylist = audioFiles.map(file => ({
+            name: cleanFileName(file.name),
+            url: URL.createObjectURL(file),
+            format: file.name.toLowerCase().endsWith('.m4a') ? 'M4A' : 'MP3',
+            favorite: false
+        }));
+        
+        renderPlaylist();
+        showStatus(`Đã tải thành công ${currentPlaylist.length} bài hát từ thư mục`, 'success');
+        elements.playerSection.style.display = 'block';
+        elements.playlistNameEl.textContent = 'Playlist từ thư mục';
+        updateSongCount();
+        
+    } catch (err) {
+        console.error('Lỗi khi xử lý thư mục:', err);
+        showStatus(`Lỗi: ${err.message || 'Không thể xử lý thư mục'}`, 'error');
+        currentPlaylist.forEach(song => URL.revokeObjectURL(song.url));
+        currentPlaylist = [];
+    }
+}
+
+// Cập nhật số lượng bài hát
+function updateSongCount() {
+    const totalSongs = currentPlaylist.length;
+    const favoriteCount = currentPlaylist.filter(song => song.favorite).length;
+    elements.songCountEl.textContent = `${totalSongs} bài hát (${favoriteCount} yêu thích)`;
+}
+
+// Hiển thị playlist
+function renderPlaylist() {
+    elements.playlistEl.innerHTML = '';
+    
+    const songsToShow = showOnlyFavorites 
+        ? currentPlaylist.filter(song => song.favorite)
+        : currentPlaylist;
+    
+    if (songsToShow.length === 0) {
+        const emptyMessage = document.createElement('li');
+        emptyMessage.textContent = showOnlyFavorites 
+            ? 'Không có bài hát yêu thích nào' 
+            : 'Không có bài hát nào trong playlist';
+        emptyMessage.style.padding = '20px';
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.color = '#666';
+        elements.playlistEl.appendChild(emptyMessage);
+        return;
+    }
+    
+    songsToShow.forEach((song, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div>
+                ${song.name}
+                <span class="file-format">${song.format}</span>
+            </div>
+            <div>
+                <button class="favorite-btn ${song.favorite ? 'active' : ''}" 
+                        data-index="${currentPlaylist.indexOf(song)}"
+                        title="${song.favorite ? 'Bỏ yêu thích' : 'Yêu thích'}">
+                    <i class="fas fa-heart"></i>
+                </button>
+                <span id="duration-${index}">--:--</span>
+            </div>
+        `;
+        
+        const actualIndex = currentPlaylist.indexOf(song);
+        li.addEventListener('click', () => playTrack(actualIndex));
+        
+        elements.playlistEl.appendChild(li);
+        updateDurationForPlaylistItem(actualIndex);
+    });
+    
+    document.querySelectorAll('.favorite-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFavorite(parseInt(this.dataset.index));
         });
-        
-        elements.fileInput.addEventListener('change', handleZipUpload);
-        elements.folderInput.addEventListener('change', handleFolderUpload);
-        elements.playBtn.addEventListener('click', togglePlay);
-        elements.prevBtn.addEventListener('click', playPrevious);
-        elements.nextBtn.addEventListener('click', playNext);
-        elements.audioPlayer.addEventListener('timeupdate', updateProgress);
-        elements.audioPlayer.addEventListener('ended', handleSongEnded);
-        elements.audioPlayer.addEventListener('loadedmetadata', updateDuration);
-        elements.progressContainer.addEventListener('click', seek);
-        elements.autoPlayToggle.addEventListener('click', toggleAutoPlay);
-        elements.showAllBtn.addEventListener('click', () => toggleFavoriteFilter(false));
-        elements.showFavoritesBtn.addEventListener('click', () => toggleFavoriteFilter(true));
-        
-        // Hiển thị trạng thái
-        function showStatus(message, type = 'info') {
-            const colors = {
-                error: { bg: '#fdecea', text: '#e74c3c' },
-                success: { bg: '#e8f5e9', text: '#2ecc71' },
-                info: { bg: '#e3f2fd', text: '#3498db' }
-            };
-            
-            elements.statusEl.innerHTML = type === 'loading' 
-                ? `<span class="loading"></span> ${message}`
-                : message;
-                
-            elements.statusEl.style.backgroundColor = colors[type]?.bg || '#f8f9fa';
-            elements.statusEl.style.color = colors[type]?.text || '#333';
+    });
+}
+
+// Chuyển đổi trạng thái yêu thích
+function toggleFavorite(index) {
+    if (index < 0 || index >= currentPlaylist.length) return;
+    
+    currentPlaylist[index].favorite = !currentPlaylist[index].favorite;
+    savePlaylistToLocalStorage();
+    renderPlaylist();
+    updateSongCount();
+    
+    if (showOnlyFavorites && currentPlaylist[index].favorite === false && 
+        currentTrackIndex === index) {
+        playNext();
+    }
+}
+
+// Lọc hiển thị bài hát yêu thích
+function toggleFavoriteFilter(showFavorites) {
+    showOnlyFavorites = showFavorites;
+    elements.showAllBtn.classList.toggle('active', !showFavorites);
+    elements.showFavoritesBtn.classList.toggle('active', showFavorites);
+    renderPlaylist();
+}
+
+// Phát bài hát
+function playTrack(index) {
+    if (index < 0 || index >= currentPlaylist.length) return;
+    
+    currentTrackIndex = index;
+    const track = currentPlaylist[currentTrackIndex];
+    
+    updatePlaylistUI();
+    
+    elements.currentFormatEl.innerHTML = `<i class="fas fa-info-circle"></i> Đang phát: ${track.format}`;
+    
+    elements.audioPlayer.src = track.url;
+    elements.audioPlayer.play()
+        .then(() => {
+            isPlaying = true;
+            updatePlayButton();
+        })
+        .catch(err => {
+            console.error('Lỗi khi phát nhạc:', err);
+            showStatus(`Lỗi phát nhạc: ${err.message}`, 'error');
+        });
+}
+
+// Xử lý khi bài hát kết thúc
+function handleSongEnded() {
+    if (autoPlayEnabled) {
+        playNext();
+    } else {
+        isPlaying = false;
+        updatePlayButton();
+    }
+}
+
+// Chuyển đổi chế độ tự động phát
+function toggleAutoPlay() {
+    autoPlayEnabled = !autoPlayEnabled;
+    elements.autoPlayToggle.classList.toggle('active', autoPlayEnabled);
+    elements.autoPlayToggle.innerHTML = `
+        <i class="fas fa-redo"></i> Tự động phát: ${autoPlayEnabled ? 'BẬT' : 'TẮT'}
+    `;
+}
+
+// Cập nhật nút phát
+function updatePlayButton() {
+    const icon = isPlaying ? 'pause' : 'play';
+    elements.playBtn.innerHTML = `<i class="fas fa-${icon}"></i>`;
+    elements.playBtn.title = isPlaying ? 'Tạm dừng' : 'Phát';
+}
+
+// Cập nhật giao diện playlist
+function updatePlaylistUI() {
+    const allItems = elements.playlistEl.querySelectorAll('li');
+    allItems.forEach((item, index) => {
+        const actualIndex = getActualIndex(index);
+        item.classList.toggle('playing', actualIndex === currentTrackIndex);
+    });
+}
+
+// Lấy index thực tế trong currentPlaylist từ index hiển thị
+function getActualIndex(displayIndex) {
+    if (!showOnlyFavorites) return displayIndex;
+    
+    const favoriteSongs = currentPlaylist.filter(song => song.favorite);
+    if (displayIndex >= 0 && displayIndex < favoriteSongs.length) {
+        return currentPlaylist.indexOf(favoriteSongs[displayIndex]);
+    }
+    return -1;
+}
+
+// Cập nhật thời lượng cho item trong playlist
+function updateDurationForPlaylistItem(index) {
+    const tempAudio = new Audio(currentPlaylist[index].url);
+    tempAudio.addEventListener('loadedmetadata', () => {
+        const durationSpan = document.getElementById(`duration-${index}`);
+        if (durationSpan) {
+            durationSpan.textContent = formatTime(tempAudio.duration);
         }
-        
-        // Xử lý tải lên file ZIP
-        async function handleZipUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            if (!file.name.endsWith('.zip')) {
-                showStatus('Vui lòng chọn file ZIP có đuôi .zip', 'error');
-                return;
-            }
-            
-            showStatus('Đang giải nén và xử lý file ZIP...', 'loading');
-            
-            try {
-                const zip = new JSZip();
-                const loadedZip = await zip.loadAsync(file);
-                
-                // Lọc và xử lý file audio
-                const audioFiles = [];
-                let totalFiles = 0;
-                
-                loadedZip.forEach((relativePath, zipEntry) => {
-                    const lowerName = zipEntry.name.toLowerCase();
-                    if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a')) {
-                        audioFiles.push(zipEntry);
-                    }
-                    totalFiles++;
-                });
-                
-                if (audioFiles.length === 0) {
-                    showStatus(`Không tìm thấy file MP3/M4A nào trong ${totalFiles} file`, 'error');
-                    return;
-                }
-                
-                showStatus(`Đang tải ${audioFiles.length} bài hát...`, 'loading');
-                
-                // Tạo playlist với batch processing để tránh block UI
-                currentPlaylist = [];
-                const batchSize = 5; // Xử lý 5 file cùng lúc
-                
-                for (let i = 0; i < audioFiles.length; i += batchSize) {
-                    const batch = audioFiles.slice(i, i + batchSize);
-                    const songs = await Promise.all(batch.map(processAudioFile));
-                    
-                    currentPlaylist.push(...songs.filter(Boolean));
-                    
-                    // Cập nhật tiến trình
-                    showStatus(`Đang tải ${Math.min(i + batchSize, audioFiles.length)}/${audioFiles.length} bài hát...`, 'loading');
-                    
-                    // Cho trình duyệt thở nếu có nhiều file
-                    if (i % 10 === 0) await new Promise(resolve => setTimeout(resolve, 0));
-                }
-                
-                renderPlaylist();
-                showStatus(`Đã tải thành công ${currentPlaylist.length} bài hát từ file ZIP`, 'success');
-                elements.playerSection.style.display = 'block';
-                elements.playlistNameEl.textContent = `Playlist: ${file.name.replace('.zip', '')}`;
-                updateSongCount();
-                
-            } catch (err) {
-                console.error('Lỗi khi xử lý file ZIP:', err);
-                showStatus(`Lỗi: ${err.message || 'Không thể xử lý file ZIP'}`, 'error');
-                
-                // Giải phóng bộ nhớ nếu có lỗi
-                currentPlaylist.forEach(song => URL.revokeObjectURL(song.url));
-                currentPlaylist = [];
-            }
-        }
-        
-        // Xử lý từng file audio
-        async function processAudioFile(file) {
-            try {
-                const blob = await file.async('blob');
-                return {
-                    name: cleanFileName(file.name),
-                    url: URL.createObjectURL(blob),
-                    format: file.name.toLowerCase().endsWith('.m4a') ? 'M4A' : 'MP3',
-                    favorite: false
-                };
-            } catch (err) {
-                console.error(`Lỗi khi xử lý file ${file.name}:`, err);
-                return null;
-            }
-        }
-        
-        // Làm sạch tên file
-        function cleanFileName(filename) {
-            return filename
-                .replace(/\.(mp3|m4a)$/i, '')
-                .replace(/[_\-]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-        
-        // Xử lý tải lên thư mục
-        async function handleFolderUpload(e) {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
-            
-            showStatus('Đang quét thư mục...', 'loading');
-            
-            try {
-                // Lọc và xử lý file audio theo batch
-                const audioFiles = Array.from(files).filter(file => {
-                    const lowerName = file.name.toLowerCase();
-                    return lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a');
-                });
-                
-                if (audioFiles.length === 0) {
-                    showStatus(`Không tìm thấy file MP3/M4A nào trong ${files.length} file`, 'error');
-                    return;
-                }
-                
-                showStatus(`Đang tải ${audioFiles.length} bài hát...`, 'loading');
-                
-                // Tạo playlist
-                currentPlaylist = audioFiles.map(file => ({
-                    name: cleanFileName(file.name),
-                    url: URL.createObjectURL(file),
-                    format: file.name.toLowerCase().endsWith('.m4a') ? 'M4A' : 'MP3',
-                    favorite: false
-                }));
-                
-                renderPlaylist();
-                showStatus(`Đã tải thành công ${currentPlaylist.length} bài hát từ thư mục`, 'success');
-                elements.playerSection.style.display = 'block';
-                elements.playlistNameEl.textContent = 'Playlist từ thư mục';
-                updateSongCount();
-                
-            } catch (err) {
-                console.error('Lỗi khi xử lý thư mục:', err);
-                showStatus(`Lỗi: ${err.message || 'Không thể xử lý thư mục'}`, 'error');
-                
-                // Giải phóng bộ nhớ nếu có lỗi
-                currentPlaylist.forEach(song => URL.revokeObjectURL(song.url));
-                currentPlaylist = [];
-            }
-        }
-        
-        // Cập nhật số lượng bài hát
-        function updateSongCount() {
-            const totalSongs = currentPlaylist.length;
-            const favoriteCount = currentPlaylist.filter(song => song.favorite).length;
-            elements.songCountEl.textContent = `${totalSongs} bài hát (${favoriteCount} yêu thích)`;
-        }
-        
-        // Hiển thị playlist
-        function renderPlaylist() {
-            elements.playlistEl.innerHTML = '';
-            
-            const songsToShow = showOnlyFavorites 
-                ? currentPlaylist.filter(song => song.favorite)
-                : currentPlaylist;
-            
-            if (songsToShow.length === 0) {
-                const emptyMessage = document.createElement('li');
-                emptyMessage.textContent = showOnlyFavorites 
-                    ? 'Không có bài hát yêu thích nào' 
-                    : 'Không có bài hát nào trong playlist';
-                emptyMessage.style.padding = '20px';
-                emptyMessage.style.textAlign = 'center';
-                emptyMessage.style.color = '#666';
-                elements.playlistEl.appendChild(emptyMessage);
-                return;
-            }
-            
-            songsToShow.forEach((song, index) => {
-                const li = document.createElement('li');
-                li.innerHTML = `
-                    <div>
-                        ${song.name}
-                        <span class="file-format">${song.format}</span>
-                    </div>
-                    <div>
-                        <button class="favorite-btn ${song.favorite ? 'active' : ''}" 
-                                data-index="${currentPlaylist.indexOf(song)}"
-                                title="${song.favorite ? 'Bỏ yêu thích' : 'Yêu thích'}">
-                            <i class="fas fa-heart"></i>
-                        </button>
-                        <span id="duration-${index}">--:--</span>
-                    </div>
-                `;
-                
-                // Tìm index thực tế trong currentPlaylist
-                const actualIndex = currentPlaylist.indexOf(song);
-                li.addEventListener('click', () => playTrack(actualIndex));
-                
-                elements.playlistEl.appendChild(li);
-                updateDurationForPlaylistItem(actualIndex);
-            });
-            
-            // Thêm sự kiện cho nút yêu thích
-            document.querySelectorAll('.favorite-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    toggleFavorite(parseInt(this.dataset.index));
-                });
-            });
-        }
-        
-        // Chuyển đổi trạng thái yêu thích
-        function toggleFavorite(index) {
-            if (index < 0 || index >= currentPlaylist.length) return;
-            
-            currentPlaylist[index].favorite = !currentPlaylist[index].favorite;
-            renderPlaylist();
-            updateSongCount();
-            
-            // Nếu đang xem danh sách yêu thích và bỏ yêu thích bài đang phát
-            if (showOnlyFavorites && currentPlaylist[index].favorite === false && 
-                currentTrackIndex === index) {
-                playNext();
-            }
-        }
-        
-        // Lọc hiển thị bài hát yêu thích
-        function toggleFavoriteFilter(showFavorites) {
-            showOnlyFavorites = showFavorites;
-            elements.showAllBtn.classList.toggle('active', !showFavorites);
-            elements.showFavoritesBtn.classList.toggle('active', showFavorites);
-            renderPlaylist();
-        }
-        
-        // Phát bài hát
-        function playTrack(index) {
-            if (index < 0 || index >= currentPlaylist.length) return;
-            
-            currentTrackIndex = index;
-            const track = currentPlaylist[currentTrackIndex];
-            
-            // Cập nhật giao diện
-            updatePlaylistUI();
-            
-            // Hiển thị định dạng file hiện tại
-            elements.currentFormatEl.innerHTML = `<i class="fas fa-info-circle"></i> Đang phát: ${track.format}`;
-            
-            // Phát nhạc
-            elements.audioPlayer.src = track.url;
+        tempAudio.src = '';
+    });
+}
+
+// Chuyển đổi phát/dừng
+function togglePlay() {
+    if (!currentPlaylist.length) return;
+    
+    if (elements.audioPlayer.paused) {
+        if (!elements.audioPlayer.src) {
+            playTrack(0);
+        } else {
             elements.audioPlayer.play()
                 .then(() => {
                     isPlaying = true;
                     updatePlayButton();
-                })
-                .catch(err => {
-                    console.error('Lỗi khi phát nhạc:', err);
-                    showStatus(`Lỗi phát nhạc: ${err.message}`, 'error');
                 });
         }
+    } else {
+        elements.audioPlayer.pause();
+        isPlaying = false;
+        updatePlayButton();
+    }
+}
+
+// Bài hát trước
+function playPrevious() {
+    if (!currentPlaylist.length) return;
+    
+    let newIndex = findPreviousTrackIndex();
+    if (newIndex >= 0) {
+        playTrack(newIndex);
+    }
+}
+
+// Tìm index bài hát trước đó
+function findPreviousTrackIndex() {
+    if (showOnlyFavorites) {
+        const favoriteSongs = currentPlaylist.filter(song => song.favorite);
+        const currentInFavorites = favoriteSongs.findIndex(
+            song => currentPlaylist.indexOf(song) === currentTrackIndex
+        );
         
-        // Xử lý khi bài hát kết thúc
-        function handleSongEnded() {
-            if (autoPlayEnabled) {
-                playNext();
-            } else {
-                isPlaying = false;
-                updatePlayButton();
-            }
+        if (currentInFavorites > 0) {
+            return currentPlaylist.indexOf(favoriteSongs[currentInFavorites - 1]);
+        } else if (favoriteSongs.length > 0) {
+            return currentPlaylist.indexOf(favoriteSongs[favoriteSongs.length - 1]);
         }
+        return -1;
+    } else {
+        return currentTrackIndex > 0 ? currentTrackIndex - 1 : currentPlaylist.length - 1;
+    }
+}
+
+// Bài hát tiếp theo
+function playNext() {
+    if (!currentPlaylist.length) return;
+    
+    let newIndex = findNextTrackIndex();
+    if (newIndex >= 0) {
+        playTrack(newIndex);
+    }
+}
+
+// Tìm index bài hát tiếp theo
+function findNextTrackIndex() {
+    if (showOnlyFavorites) {
+        const favoriteSongs = currentPlaylist.filter(song => song.favorite);
+        const currentInFavorites = favoriteSongs.findIndex(
+            song => currentPlaylist.indexOf(song) === currentTrackIndex
+        );
         
-        // Chuyển đổi chế độ tự động phát
-        function toggleAutoPlay() {
-            autoPlayEnabled = !autoPlayEnabled;
-            elements.autoPlayToggle.classList.toggle('active', autoPlayEnabled);
-            elements.autoPlayToggle.innerHTML = `
-                <i class="fas fa-redo"></i> Tự động phát: ${autoPlayEnabled ? 'BẬT' : 'TẮT'}
-            `;
+        if (currentInFavorites < favoriteSongs.length - 1) {
+            return currentPlaylist.indexOf(favoriteSongs[currentInFavorites + 1]);
+        } else if (favoriteSongs.length > 0) {
+            return currentPlaylist.indexOf(favoriteSongs[0]);
         }
+        return -1;
+    } else {
+        return currentTrackIndex < currentPlaylist.length - 1 ? currentTrackIndex + 1 : 0;
+    }
+}
+
+// Cập nhật thanh tiến trình
+function updateProgress() {
+    if (elements.audioPlayer.duration) {
+        const progress = (elements.audioPlayer.currentTime / elements.audioPlayer.duration) * 100;
+        elements.progressBar.style.width = `${progress}%`;
+        elements.currentTimeEl.textContent = formatTime(elements.audioPlayer.currentTime);
         
-        // Cập nhật nút phát
-        function updatePlayButton() {
-            const icon = isPlaying ? 'pause' : 'play';
-            elements.playBtn.innerHTML = `<i class="fas fa-${icon}"></i>`;
-            elements.playBtn.title = isPlaying ? 'Tạm dừng' : 'Phát';
+        const containerWidth = elements.progressContainer.clientWidth;
+        const iconPosition = (progress / 100) * containerWidth;
+        elements.progressIcon.style.left = `${iconPosition}px`;
+    }
+}
+
+// Nhảy đến vị trí khi click trên progress bar
+function seek(e) {
+    if (!elements.audioPlayer.duration) return;
+    
+    const width = this.clientWidth;
+    const clickX = e.offsetX;
+    const duration = elements.audioPlayer.duration;
+    
+    elements.audioPlayer.currentTime = (clickX / width) * duration;
+}
+
+// Cập nhật thời lượng bài hát
+function updateDuration() {
+    elements.durationEl.textContent = formatTime(elements.audioPlayer.duration);
+}
+
+// Định dạng thời gian (phút:giây)
+function formatTime(seconds) {
+    if (isNaN(seconds)) return "0:00";
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// Hàm tua nhanh/chậm
+function seekTime(seconds) {
+    if (!elements.audioPlayer.src) return;
+    
+    elements.audioPlayer.currentTime += seconds;
+    
+    const direction = seconds > 0 ? 'Tua nhanh' : 'Tua lại';
+    showStatus(`${direction} ${Math.abs(seconds)} giây`, 'info');
+    setTimeout(() => {
+        if (elements.statusEl.textContent.includes(direction)) {
+            elements.statusEl.textContent = '';
         }
-        
-        // Cập nhật giao diện playlist
-        function updatePlaylistUI() {
-            const allItems = elements.playlistEl.querySelectorAll('li');
-            allItems.forEach((item, index) => {
-                // Tìm index thực tế trong currentPlaylist
-                const actualIndex = getActualIndex(index);
-                item.classList.toggle('playing', actualIndex === currentTrackIndex);
-            });
+    }, 1000);
+}
+
+// Hàm đặt tốc độ phát
+function setPlaybackRate(rate) {
+    playbackRate = rate;
+    elements.audioPlayer.playbackRate = rate;
+    elements.playbackRateEl.textContent = `Tốc độ phát: ${rate}x`;
+    
+    elements.slowBtn.classList.toggle('active', rate === 0.5);
+    elements.normalBtn.classList.toggle('active', rate === 1.0);
+    elements.fastBtn.classList.toggle('active', rate === 1.5);
+    
+    showStatus(`Đã đặt tốc độ phát ${rate}x`, 'info');
+    setTimeout(() => {
+        if (elements.statusEl.textContent.includes('tốc độ phát')) {
+            elements.statusEl.textContent = '';
         }
+    }, 1000);
+}
+
+// Hàm lưu playlist vào Local Storage
+function savePlaylistToLocalStorage() {
+    // Chỉ lưu thông tin cơ bản, không lưu URL vì nó là tạm thời
+    const playlistToSave = currentPlaylist.map(song => ({
+        name: song.name,
+        format: song.format,
+        favorite: song.favorite
+    }));
+    
+    localStorage.setItem('musicPlaylist', JSON.stringify(playlistToSave));
+}
+
+
+// Hàm khôi phục playlist từ Local Storage
+function restorePlaylistFromLocalStorage() {
+    if (savedPlaylist.length > 0) {
+        showStatus('Đang khôi phục playlist từ bộ nhớ...', 'loading');
         
-        // Lấy index thực tế trong currentPlaylist từ index hiển thị
-        function getActualIndex(displayIndex) {
-            if (!showOnlyFavorites) return displayIndex;
-            
-            const favoriteSongs = currentPlaylist.filter(song => song.favorite);
-            if (displayIndex >= 0 && displayIndex < favoriteSongs.length) {
-                return currentPlaylist.indexOf(favoriteSongs[displayIndex]);
-            }
-            return -1;
-        }
+        elements.playlistNameEl.textContent = 'Playlist đã lưu';
+        updateSongCount();
+        elements.playerSection.style.display = 'block';
+        renderSavedPlaylist();
         
-        // Cập nhật thời lượng cho item trong playlist
-        function updateDurationForPlaylistItem(index) {
-            const tempAudio = new Audio(currentPlaylist[index].url);
-            tempAudio.addEventListener('loadedmetadata', () => {
-                const durationSpan = document.getElementById(`duration-${index}`);
-                if (durationSpan) {
-                    durationSpan.textContent = formatTime(tempAudio.duration);
-                }
-                // Giải phóng bộ nhớ
-                tempAudio.src = '';
-            });
-        }
+        showStatus(`Đã khôi phục ${savedPlaylist.length} bài hát từ bộ nhớ`, 'success');
+    }
+}
+
+// Hàm hiển thị playlist đã lưu
+function renderSavedPlaylist() {
+    elements.playlistEl.innerHTML = '';
+    
+    const songsToShow = showOnlyFavorites 
+        ? savedPlaylist.filter(song => song.favorite)
+        : savedPlaylist;
+    
+    if (songsToShow.length === 0) {
+        const emptyMessage = document.createElement('li');
+        emptyMessage.textContent = showOnlyFavorites 
+            ? 'Không có bài hát yêu thích nào' 
+            : 'Không có bài hát nào trong playlist';
+        emptyMessage.style.padding = '20px';
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.color = '#666';
+        elements.playlistEl.appendChild(emptyMessage);
+        return;
+    }
+    
+    songsToShow.forEach((song, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div>
+                ${song.name}
+                <span class="file-format">${song.format}</span>
+            </div>
+            <div>
+                <button class="favorite-btn ${song.favorite ? 'active' : ''}" 
+                        data-index="${index}"
+                        title="${song.favorite ? 'Bỏ yêu thích' : 'Yêu thích'}">
+                    <i class="fas fa-heart"></i>
+                </button>
+                <span>Đã lưu</span>
+            </div>
+        `;
         
-        // Chuyển đổi phát/dừng
-        function togglePlay() {
-            if (!currentPlaylist.length) return;
-            
-            if (elements.audioPlayer.paused) {
-                if (!elements.audioPlayer.src) {
-                    playTrack(0);
-                } else {
-                    elements.audioPlayer.play()
-                        .then(() => {
-                            isPlaying = true;
-                            updatePlayButton();
-                        });
-                }
-            } else {
-                elements.audioPlayer.pause();
-                isPlaying = false;
-                updatePlayButton();
-            }
-        }
-        
-        // Bài hát trước
-        function playPrevious() {
-            if (!currentPlaylist.length) return;
-            
-            let newIndex = findPreviousTrackIndex();
-            if (newIndex >= 0) {
-                playTrack(newIndex);
-            }
-        }
-        
-        // Tìm index bài hát trước đó (có tính đến bộ lọc yêu thích)
-        function findPreviousTrackIndex() {
-            if (showOnlyFavorites) {
-                const favoriteSongs = currentPlaylist.filter(song => song.favorite);
-                const currentInFavorites = favoriteSongs.findIndex(
-                    song => currentPlaylist.indexOf(song) === currentTrackIndex
-                );
-                
-                if (currentInFavorites > 0) {
-                    return currentPlaylist.indexOf(favoriteSongs[currentInFavorites - 1]);
-                } else if (favoriteSongs.length > 0) {
-                    return currentPlaylist.indexOf(favoriteSongs[favoriteSongs.length - 1]);
-                }
-                return -1;
-            } else {
-                return currentTrackIndex > 0 ? currentTrackIndex - 1 : currentPlaylist.length - 1;
-            }
-        }
-        
-        // Bài hát tiếp theo
-        function playNext() {
-            if (!currentPlaylist.length) return;
-            
-            let newIndex = findNextTrackIndex();
-            if (newIndex >= 0) {
-                playTrack(newIndex);
-            }
-        }
-        
-        // Tìm index bài hát tiếp theo (có tính đến bộ lọc yêu thích)
-        function findNextTrackIndex() {
-            if (showOnlyFavorites) {
-                const favoriteSongs = currentPlaylist.filter(song => song.favorite);
-                const currentInFavorites = favoriteSongs.findIndex(
-                    song => currentPlaylist.indexOf(song) === currentTrackIndex
-                );
-                
-                if (currentInFavorites < favoriteSongs.length - 1) {
-                    return currentPlaylist.indexOf(favoriteSongs[currentInFavorites + 1]);
-                } else if (favoriteSongs.length > 0) {
-                    return currentPlaylist.indexOf(favoriteSongs[0]);
-                }
-                return -1;
-            } else {
-                return currentTrackIndex < currentPlaylist.length - 1 ? currentTrackIndex + 1 : 0;
-            }
-        }
-        
-        // Cập nhật thanh tiến trình
-        function updateProgress() {
-            if (elements.audioPlayer.duration) {
-                const progress = (elements.audioPlayer.currentTime / elements.audioPlayer.duration) * 100;
-                elements.progressBar.style.width = `${progress}%`;
-                elements.currentTimeEl.textContent = formatTime(elements.audioPlayer.currentTime);
-            }
-        }
-        
-        // Nhảy đến vị trí khi click trên progress bar
-        function seek(e) {
-            if (!elements.audioPlayer.duration) return;
-            
-            const width = this.clientWidth;
-            const clickX = e.offsetX;
-            const duration = elements.audioPlayer.duration;
-            
-            elements.audioPlayer.currentTime = (clickX / width) * duration;
-        }
-        
-        // Cập nhật thời lượng bài hát
-        function updateDuration() {
-            elements.durationEl.textContent = formatTime(elements.audioPlayer.duration);
-        }
-        
-        // Định dạng thời gian (phút:giây)
-        function formatTime(seconds) {
-            if (isNaN(seconds)) return "0:00";
-            
-            const mins = Math.floor(seconds / 60);
-            const secs = Math.floor(seconds % 60);
-            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }
-        
-        // Dọn dẹp khi trang đóng
-        window.addEventListener('beforeunload', () => {
-            currentPlaylist.forEach(song => URL.revokeObjectURL(song.url));
+        li.classList.add('saved-item');
+        elements.playlistEl.appendChild(li);
+    });
+    
+    document.querySelectorAll('.favorite-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const index = parseInt(this.dataset.index);
+            savedPlaylist[index].favorite = !savedPlaylist[index].favorite;
+            savePlaylistToLocalStorage();
+            renderSavedPlaylist();
+            updateSongCount();
         });
+    });
+}
+
+function checkSavedPlaylistOnLoad() {
+    const saved = localStorage.getItem('musicPlaylist');
+    if (saved) {
+        savedPlaylist = JSON.parse(saved);
+        if (savedPlaylist.length > 0) {
+            showStatus(`Đã tìm thấy ${savedPlaylist.length} bài hát đã lưu`, 'info');
+            elements.playlistNameEl.textContent = 'Playlist đã lưu';
+            updateSongCount();
+            renderSavedPlaylist();
+            elements.playerSection.style.display = 'block';
+        }
+    }
+}
+// Hàm di chuyển bài hát lên
+function moveTrackUp() {
+    if (currentTrackIndex <= 0 || currentPlaylist.length <= 1) return;
+    
+    // Hoán đổi vị trí bài hát hiện tại với bài hát trước đó
+    [currentPlaylist[currentTrackIndex], currentPlaylist[currentTrackIndex - 1]] = 
+        [currentPlaylist[currentTrackIndex - 1], currentPlaylist[currentTrackIndex]];
+    
+    currentTrackIndex--;
+    savePlaylistToLocalStorage();
+    renderPlaylist();
+    
+    // Cập nhật UI để hiển thị bài hát đang phát mới
+    updatePlaylistUI();
+    showStatus("Đã di chuyển bài hát lên", "success");
+}
+
+// Hàm di chuyển bài hát xuống
+function moveTrackDown() {
+    if (currentTrackIndex >= currentPlaylist.length - 1 || currentPlaylist.length <= 1) return;
+    
+    // Hoán đổi vị trí bài hát hiện tại với bài hát tiếp theo
+    [currentPlaylist[currentTrackIndex], currentPlaylist[currentTrackIndex + 1]] = 
+        [currentPlaylist[currentTrackIndex + 1], currentPlaylist[currentTrackIndex]];
+    
+    currentTrackIndex++;
+    savePlaylistToLocalStorage();
+    renderPlaylist();
+    
+    // Cập nhật UI để hiển thị bài hát đang phát mới
+    updatePlaylistUI();
+    showStatus("Đã di chuyển bài hát xuống", "success");
+}
+
+// Hàm xóa bài hát hiện tại
+function deleteCurrentTrack() {
+    if (!currentPlaylist.length || currentTrackIndex < 0) return;
+    
+    // Xác nhận trước khi xóa
+    if (!confirm(`Bạn có chắc muốn xóa bài hát "${currentPlaylist[currentTrackIndex].name}"?`)) {
+        return;
+    }
+    
+    // Thu hồi URL object để giải phóng bộ nhớ
+    URL.revokeObjectURL(currentPlaylist[currentTrackIndex].url);
+    
+    // Xóa bài hát khỏi playlist
+    currentPlaylist.splice(currentTrackIndex, 1);
+    
+    // Điều chỉnh currentTrackIndex nếu cần
+    if (currentTrackIndex >= currentPlaylist.length) {
+        currentTrackIndex = Math.max(0, currentPlaylist.length - 1);
+    }
+    
+    // Nếu playlist trống, dừng phát
+    if (currentPlaylist.length === 0) {
+        elements.audioPlayer.src = '';
+        isPlaying = false;
+        updatePlayButton();
+    } else if (elements.audioPlayer.src) {
+        // Nếu đang phát, phát bài hát mới tại vị trí hiện tại
+        playTrack(currentTrackIndex);
+    }
+    
+    savePlaylistToLocalStorage();
+    renderPlaylist();
+    updateSongCount();
+    showStatus("Đã xóa bài hát", "success");
+}
+// Khởi tạo ứng dụng
+initializeEventListeners();
     </script>
 </body>
 </html>
